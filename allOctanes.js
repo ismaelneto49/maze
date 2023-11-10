@@ -1,91 +1,74 @@
+const fs = require("fs");
 const { drawLine } = require("./lineDrawer");
-const { makeScreen, printScreen } = require("./screenBuilder");
+const { makeScreen, fillScreen, clearScreen } = require("./screenBuilder");
+const {
+  coordinateMapper,
+  projectVertex,
+  rotationFunctions,
+} = require("./coordinateHelpers");
 
-const MATRIX_ORDER = 100;
-const space = "░░";
-
-let mainScreen = makeScreen(MATRIX_ORDER, space);
-
-// 3d projection
-
-const vertices = [
-  [22, 22, 22],
-  [22, -22, 22],
-  [-22, -22, 22],
-  [-22, 22, 22],
-  [22, 22, -22],
-  [22, -22, -22],
-  [-22, -22, -22],
-  [-22, 22, -22],
-];
-
-const edges = [
-  [0, 1],
-  [1, 2],
-  [2, 3],
-  [3, 0],
-  [4, 5],
-  [5, 6],
-  [6, 7],
-  [7, 4],
-  [0, 4],
-  [1, 5],
-  [2, 6],
-  [3, 7],
-];
-
-function coordinateMapper({ x, y }) {
-  const bothPositive = x >= 0 && y >= 0;
-  const bothNegative = x <= 0 && y <= 0;
-  const xPositive_yNegative = x >= 0 && y <= 0;
-  const xNegative_yPositive = x <= 0 && y >= 0;
-
-  const differenceFactor = MATRIX_ORDER / 2;
-  let realX = 0;
-  let realY = 0;
-  if (bothPositive || bothNegative) {
-    realX = differenceFactor + x;
-    realY = differenceFactor - y;
-  } else if (xPositive_yNegative || xNegative_yPositive) {
-    realX = differenceFactor - x;
-    realY = differenceFactor + y;
-  }
-  return { x: realX, y: realY };
-}
-
-function projectVertex(vertex, focalLength) {
-  const [x, y, z] = vertex;
-
-  const xProjected = Math.trunc((focalLength * x) / (z + focalLength));
-  const yProjected = Math.trunc((focalLength * y) / (z + focalLength));
-
-  return { x: xProjected, y: yProjected };
-}
-
-function createLines(vertices, edges, focalLength) {
+function createLines(vertices, edges, focalLength, SCREEN_DIMENSION) {
   const projectedVertices = vertices.map((vertex) =>
     projectVertex(vertex, focalLength)
   );
 
-  const lines = [];
-  edges.forEach((edge) => {
+  const lines = edges.map((edge) => {
     const point1 = projectedVertices[edge[0]];
     const point2 = projectedVertices[edge[1]];
 
-    const point1Real = coordinateMapper(point1);
-    const point2Real = coordinateMapper(point2);
+    const point1Real = coordinateMapper(point1, SCREEN_DIMENSION);
+    const point2Real = coordinateMapper(point2, SCREEN_DIMENSION);
 
-    lines.push([point1Real, point2Real]);
+    return [{ ...point1Real }, { ...point2Real }];
   });
   return lines;
 }
 
-const lines = createLines(vertices, edges, 75);
+function main() {
+  const { rotateOnX, rotateOnY, rotateOnZ } = rotationFunctions;
 
-lines.forEach((lines) => {
-  const point1 = lines[0];
-  const point2 = lines[1];
-  drawLine(mainScreen, point1, point2);
-});
+  const SCREEN_DIMENSION = 100;
+  const BLANK_SPACE_CHARACTER = "░░";
+  const screen = makeScreen(SCREEN_DIMENSION, BLANK_SPACE_CHARACTER);
 
-printScreen(mainScreen);
+  const shapeData = JSON.parse(
+    fs.readFileSync("./shape-data.json", "utf-8", (err) => console.err(err))
+  );
+
+  let { vertices, edges } = shapeData;
+  const FOCAL_LENGTH = 75;
+
+  vertices = [
+    { x: 22, y: -8, z: 30 },
+    { x: 22, y: -30, z: -8 },
+    { x: -22, y: -30, z: -8 },
+    { x: -22, y: -8, z: 30 },
+    { x: 22, y: 30, z: 8 },
+    { x: 22, y: 8, z: -30 },
+    { x: -22, y: 8, z: -30 },
+    { x: -22, y: 30, z: 8 },
+  ];
+
+  const lines = createLines(vertices, edges, FOCAL_LENGTH, SCREEN_DIMENSION);
+
+  lines.forEach((lines) => {
+    const point1 = lines[0];
+    const point2 = lines[1];
+    drawLine(screen, point1, point2);
+  });
+
+  const matrices = [];
+  const bufferMatrix = fillScreen(screen);
+
+  matrices.push(
+    bufferMatrix.map((row) => {
+      return row.slice();
+    })
+  );
+
+  clearScreen(screen);
+  console.log(bufferMatrix.join("\n"));
+  vertices.forEach((vertex) => console.log(rotateOnX(vertex, 30)));
+}
+
+module.exports = { projectWireframe: main };

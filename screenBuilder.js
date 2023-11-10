@@ -1,13 +1,16 @@
 const MATRIX_ORDER = 100;
-const space = "░░";
+const space_character = "░░";
 
-function makeScreen(dimension = MATRIX_ORDER, fill = space) {
+function makeScreen(dimension = MATRIX_ORDER, fill = space_character) {
   return Array.from({ length: dimension }, () =>
     Array.from({ length: dimension }, () => fill)
   );
 }
 
-function printScreen(screen) {
+/*
+  Prints a javascript matrix as a cartesian plane
+*/
+function fillScreen(screen) {
   function rotateMatrix(matrix) {
     const numRows = matrix.length;
     const numCols = matrix[0].length;
@@ -22,13 +25,19 @@ function printScreen(screen) {
   }
 
   rotateMatrix(screen);
-  for (let i = screen.length - 1; i >= 0; i--) {
-    const line = screen[i];
-    console.log(line.join(""));
+  return screen.map((line) => line.join("")).reverse();
+}
+
+function clearScreen(screen) {
+  for (let i = 0; i < screen.length; i++) {
+    for (let j = 0; j < screen[i].length; j++) {
+      screen[i][j] = space_character;
+    }
   }
 }
 
 module.exports = {
   makeScreen,
-  printScreen,
+  fillScreen,
+  clearScreen,
 };

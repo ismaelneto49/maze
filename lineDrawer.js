@@ -1,7 +1,7 @@
 function drawLine(screen, { x: x1, y: y1 }, { x: x2, y: y2 }) {
   function drawPixel(x, y) {
     const block = "██";
-    
+
     screen[x][y] = block;
   }
 
